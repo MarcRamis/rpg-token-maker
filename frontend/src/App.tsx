@@ -1,5 +1,13 @@
-import { useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useRef, useState } from "react";
+import {
+  Circle,
+  Group,
+  Image as KonvaImage,
+  Layer,
+  Line,
+  Stage,
+} from "react-konva";
+import Konva from "konva";
 import "./App.css";
 
 type Position = {
@@ -7,10 +15,75 @@ type Position = {
   y: number;
 };
 
+type DrawnMask = {
+  id: string;
+  points: number[];
+};
+
 const TOKEN_SIZE = 360;
+const EDITOR_SIZE = 520;
+const TOKEN_OFFSET = (EDITOR_SIZE - TOKEN_SIZE) / 2;
+const TOKEN_CENTER = TOKEN_OFFSET + TOKEN_SIZE / 2;
+
+function useLoadedImage(src: string | null) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!src) {
+      queueMicrotask(() => {
+        if (!cancelled) setImage(null);
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const img = new window.Image();
+
+    img.onload = () => {
+      if (!cancelled) setImage(img);
+    };
+
+    img.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return image;
+}
+
+function getImageProps(
+  image: HTMLImageElement | null,
+  scale: number,
+  position: Position,
+) {
+  if (!image) return null;
+
+  const ratio = Math.min(TOKEN_SIZE / image.width, TOKEN_SIZE / image.height);
+  const width = image.width * ratio;
+  const height = image.height * ratio;
+
+  return {
+    x: TOKEN_CENTER + position.x,
+    y: TOKEN_CENTER + position.y,
+    width,
+    height,
+    offsetX: width / 2,
+    offsetY: height / 2,
+    scaleX: scale / 100,
+    scaleY: scale / 100,
+  };
+}
 
 function App() {
-  const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(null);
+  const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(
+    null,
+  );
   const [tokenImageUrl, setTokenImageUrl] = useState<string | null>(null);
   const [scale, setScale] = useState(100);
   const [tokenScale, setTokenScale] = useState(100);
@@ -18,7 +91,17 @@ function App() {
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
   const [exportSize, setExportSize] = useState(512);
 
-  const tokenPreviewRef = useRef<HTMLDivElement | null>(null);
+  const [drawnMasks, setDrawnMasks] = useState<DrawnMask[]>([]);
+  const [currentMaskPoints, setCurrentMaskPoints] = useState<number[]>([]);
+  const [isDrawingMask, setIsDrawingMask] = useState(false);
+
+  const stageRef = useRef<Konva.Stage | null>(null);
+
+  const characterImage = useLoadedImage(characterImageUrl);
+  const tokenImage = useLoadedImage(tokenImageUrl);
+
+  const characterProps = getImageProps(characterImage, scale, position);
+  const tokenProps = getImageProps(tokenImage, tokenScale, { x: 0, y: 0 });
 
   function loadCharacterImage(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -26,6 +109,8 @@ function App() {
     setCharacterImageUrl(URL.createObjectURL(file));
     setScale(100);
     setPosition({ x: 0, y: 0 });
+    setDrawnMasks([]);
+    setCurrentMaskPoints([]);
   }
 
   function loadTokenImage(file: File) {
@@ -34,7 +119,9 @@ function App() {
     setTokenImageUrl(URL.createObjectURL(file));
   }
 
-  function handleCharacterImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleCharacterImageUpload(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
     if (file) loadCharacterImage(file);
   }
@@ -63,38 +150,62 @@ function App() {
     });
   }
 
-  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.buttons !== 1) return;
+  function handleStageMouseDown(event: Konva.KonvaEventObject<MouseEvent>) {
+    if (!event.evt.shiftKey) return;
 
-    const target = event.target as HTMLElement;
-    if (!target.classList.contains("characterImage")) return;
+    const stage = stageRef.current;
+    const pointer = stage?.getPointerPosition();
+    if (!pointer) return;
 
-    const rect = event.currentTarget.getBoundingClientRect();
-
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    const newX = event.clientX - centerX;
-    const newY = event.clientY - centerY;
-
-    const limit = 200;
-
-    setPosition({
-      x: Math.max(-limit, Math.min(limit, newX)),
-      y: Math.max(-limit, Math.min(limit, newY)),
-    });
+    setIsDrawingMask(true);
+    setCurrentMaskPoints([pointer.x, pointer.y]);
   }
 
-  async function downloadToken() {
-    if (!tokenPreviewRef.current) return;
+  function handleStageMouseMove() {
+    if (!isDrawingMask) return;
 
-    const dataUrl = await toPng(tokenPreviewRef.current, {
+    const stage = stageRef.current;
+    const pointer = stage?.getPointerPosition();
+    if (!pointer) return;
+
+    setCurrentMaskPoints((previous) => [...previous, pointer.x, pointer.y]);
+  }
+
+  function handleStageMouseUp() {
+    if (!isDrawingMask) return;
+
+    if (currentMaskPoints.length > 6) {
+      setDrawnMasks((previous) => [
+        ...previous,
+        {
+          id: crypto.randomUUID(),
+          points: currentMaskPoints,
+        },
+      ]);
+    }
+
+    setIsDrawingMask(false);
+    setCurrentMaskPoints([]);
+  }
+
+  function downloadToken() {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    stage.find(".helper").forEach((node) => {
+      node.visible(false);
+    });
+
+    const dataUrl = stage.toDataURL({
+      x: TOKEN_OFFSET,
+      y: TOKEN_OFFSET,
       width: TOKEN_SIZE,
       height: TOKEN_SIZE,
-      canvasWidth: exportSize,
-      canvasHeight: exportSize,
-      pixelRatio: 1,
-      backgroundColor: "transparent",
+      pixelRatio: exportSize / TOKEN_SIZE,
+    });
+
+    stage.find(".helper").forEach((node) => {
+      node.visible(true);
     });
 
     const link = document.createElement("a");
@@ -110,12 +221,20 @@ function App() {
 
         <label className="uploadButton">
           Subir personaje
-          <input type="file" accept="image/*" onChange={handleCharacterImageUpload} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleCharacterImageUpload}
+          />
         </label>
 
         <label className="uploadButton">
           Subir token
-          <input type="file" accept="image/*" onChange={handleTokenImageUpload} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleTokenImageUpload}
+          />
         </label>
 
         <label className="control">
@@ -130,7 +249,7 @@ function App() {
         </label>
 
         <label className="control">
-          Tamaño máscara: {maskSize}px
+          Tamaño máscara base: {maskSize}px
           <input
             type="range"
             min="100"
@@ -150,6 +269,10 @@ function App() {
             onChange={(event) => setTokenScale(Number(event.target.value))}
           />
         </label>
+
+        <button className="downloadButton" onClick={() => setDrawnMasks([])}>
+          Borrar máscara dinámica
+        </button>
 
         <label className="control">
           Resolución descarga
@@ -171,45 +294,121 @@ function App() {
 
       <section className="workspace">
         <div
-          ref={tokenPreviewRef}
           className="tokenPreview"
           onDrop={handleDrop}
           onDragOver={(event) => event.preventDefault()}
-          onPointerMove={handlePointerMove}
         >
-          <div
-            className="characterMask"
-            style={{
-              width: `${maskSize}px`,
-              height: `${maskSize}px`,
-            }}
+          <Stage
+            ref={stageRef}
+            width={EDITOR_SIZE}
+            height={EDITOR_SIZE}
+            onMouseDown={handleStageMouseDown}
+            onMouseMove={handleStageMouseMove}
+            onMouseUp={handleStageMouseUp}
           >
-            {characterImageUrl ? (
-              <img
-                src={characterImageUrl}
-                alt="Personaje"
-                className="characterImage"
-                draggable={false}
-                style={{
-                  transform: `scale(${scale / 100}) translate(${position.x}px, ${position.y}px)`,
-                }}
-              />
-            ) : (
-              <p>Arrastra una imagen aquí</p>
-            )}
-          </div>
+            <Layer>
+              <Group
+                clipFunc={(ctx) => {
+                  ctx.beginPath();
 
-          {tokenImageUrl && (
-            <img
-              src={tokenImageUrl}
-              alt="Token"
-              className="tokenImage"
-              draggable={false}
-              style={{
-                transform: `scale(${tokenScale / 100})`,
-              }}
-            />
-          )}
+                  ctx.arc(
+                    TOKEN_CENTER,
+                    TOKEN_CENTER,
+                    maskSize / 2,
+                    0,
+                    Math.PI * 2,
+                  );
+
+                  ctx.closePath();
+                }}
+              >
+                {characterImage && characterProps && (
+                  <KonvaImage
+                    image={characterImage}
+                    {...characterProps}
+                    draggable={!isDrawingMask}
+                    onDragMove={(event) => {
+                      setPosition({
+                        x: event.target.x() - TOKEN_CENTER,
+                        y: event.target.y() - TOKEN_CENTER,
+                      });
+                    }}
+                  />
+                )}
+              </Group>
+
+              {tokenImage && tokenProps && (
+                <KonvaImage
+                  image={tokenImage}
+                  {...tokenProps}
+                  listening={false}
+                />
+              )}
+
+              <Group
+                clipFunc={(ctx) => {
+                  ctx.beginPath();
+
+                  [
+                    ...drawnMasks.map((mask) => mask.points),
+                    currentMaskPoints,
+                  ].forEach((points) => {
+                    if (points.length < 4) return;
+
+                    ctx.moveTo(points[0], points[1]);
+
+                    for (let i = 2; i < points.length; i += 2) {
+                      ctx.lineTo(points[i], points[i + 1]);
+                    }
+
+                    ctx.closePath();
+                  });
+                }}
+              >
+                {characterImage && characterProps && (
+                  <KonvaImage
+                    image={characterImage}
+                    {...characterProps}
+                    listening={false}
+                  />
+                )}
+              </Group>
+
+              <Circle
+                name="helper"
+                x={TOKEN_CENTER}
+                y={TOKEN_CENTER}
+                radius={maskSize / 2}
+                stroke="#ffffff66"
+                dash={[6, 6]}
+                listening={false}
+              />
+
+              {drawnMasks.map((mask) => (
+                <Line
+                  name="helper"
+                  key={mask.id}
+                  points={mask.points}
+                  closed
+                  stroke="white"
+                  dash={[6, 6]}
+                  listening={false}
+                />
+              ))}
+
+              {currentMaskPoints.length > 0 && (
+                <Line
+                  name="helper"
+                  points={currentMaskPoints}
+                  closed
+                  stroke="white"
+                  dash={[6, 6]}
+                  listening={false}
+                />
+              )}
+            </Layer>
+          </Stage>
+          <div className="tokenPreviewBorder" />
         </div>
       </section>
     </main>

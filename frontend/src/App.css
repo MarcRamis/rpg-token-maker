@@ -62,8 +62,8 @@ body {
 }
 
 .tokenPreview {
-  width: 360px;
-  height: 360px;
+  width: 520px;
+  height: 520px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -147,5 +147,15 @@ body {
   inset: 0;
   border: 1px dashed #ffffff66;
   border-radius: 50%;
+  pointer-events: none;
+}
+
+.tokenPreviewBorder {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  left: 80px;
+  top: 80px;
+  border: 1px dashed #44445a;
   pointer-events: none;
 }
