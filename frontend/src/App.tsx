@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import { toPng } from "html-to-image";
 
 type Position = {
   x: number;
   y: number;
 };
+
+const TOKEN_SIZE = 360;
 
 function App() {
   const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(
@@ -14,6 +17,76 @@ function App() {
   const [scale, setScale] = useState(100);
   const [tokenScale, setTokenScale] = useState(100);
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
+  const [exportSize, setExportSize] = useState(512);
+  const tokenPreviewRef = useRef<HTMLDivElement | null>(null);
+
+  const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = src;
+    });
+  }
+
+  function drawContainedImage(
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement,
+    imageScale: number,
+    x: number,
+    y: number,
+  ) {
+    const ratio = Math.min(TOKEN_SIZE / image.width, TOKEN_SIZE / image.height);
+    const width = image.width * ratio;
+    const height = image.height * ratio;
+
+    ctx.save();
+    ctx.translate(TOKEN_SIZE / 2, TOKEN_SIZE / 2);
+    ctx.scale(imageScale / 100, imageScale / 100);
+    ctx.translate(x, y);
+    ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    ctx.restore();
+  }
+
+  useEffect(() => {
+    async function renderPreview() {
+      const canvas = exportCanvasRef.current;
+      if (!canvas) return;
+
+      canvas.width = exportSize;
+      canvas.height = exportSize;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.scale(exportSize / TOKEN_SIZE, exportSize / TOKEN_SIZE);
+
+      if (characterImageUrl) {
+        const characterImage = await loadImage(characterImageUrl);
+        drawContainedImage(ctx, characterImage, scale, position.x, position.y);
+      }
+
+      if (tokenImageUrl) {
+        const tokenImage = await loadImage(tokenImageUrl);
+        drawContainedImage(ctx, tokenImage, tokenScale, 0, 0);
+      }
+
+      ctx.restore();
+    }
+
+    renderPreview();
+  }, [
+    characterImageUrl,
+    tokenImageUrl,
+    scale,
+    tokenScale,
+    position,
+    exportSize,
+  ]);
 
   function loadCharacterImage(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -64,7 +137,6 @@ function App() {
     if (event.buttons !== 1) return;
 
     const target = event.target as HTMLElement;
-
     if (!target.classList.contains("characterImage")) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
@@ -81,6 +153,24 @@ function App() {
       x: Math.max(-limit, Math.min(limit, newX)),
       y: Math.max(-limit, Math.min(limit, newY)),
     });
+  }
+
+  async function downloadToken() {
+    if (!tokenPreviewRef.current) return;
+
+    const dataUrl = await toPng(tokenPreviewRef.current, {
+      width: TOKEN_SIZE,
+      height: TOKEN_SIZE,
+      canvasWidth: exportSize,
+      canvasHeight: exportSize,
+      pixelRatio: 1,
+      backgroundColor: "transparent",
+    });
+
+    const link = document.createElement("a");
+    link.download = `rpg-token-${exportSize}px.png`;
+    link.href = dataUrl;
+    link.click();
   }
 
   return (
@@ -116,6 +206,7 @@ function App() {
             onChange={(event) => setScale(Number(event.target.value))}
           />
         </label>
+
         <label className="control">
           Tamaño token: {tokenScale}%
           <input
@@ -126,10 +217,27 @@ function App() {
             onChange={(event) => setTokenScale(Number(event.target.value))}
           />
         </label>
+
+        <label className="control">
+          Resolución descarga
+          <select
+            value={exportSize}
+            onChange={(event) => setExportSize(Number(event.target.value))}
+          >
+            <option value={256}>256 x 256</option>
+            <option value={512}>512 x 512</option>
+            <option value={1024}>1024 x 1024</option>
+            <option value={2048}>2048 x 2048</option>
+          </select>
+        </label>
+        <button className="downloadButton" onClick={downloadToken}>
+          Descargar PNG
+        </button>
       </aside>
 
       <section className="workspace">
         <div
+          ref={tokenPreviewRef}
           className="tokenPreview"
           onDrop={handleDrop}
           onDragOver={(event) => event.preventDefault()}
@@ -142,7 +250,7 @@ function App() {
               className="characterImage"
               draggable={false}
               style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${scale / 100})`,
+                transform: `scale(${scale / 100}) translate(${position.x}px, ${position.y}px)`,
               }}
             />
           ) : (
