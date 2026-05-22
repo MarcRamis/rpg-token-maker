@@ -217,10 +217,10 @@ function App() {
   return (
     <main className="app">
       <aside className="panel">
-        <h1>RPG Token Maker</h1>
+        <h1>Tokn</h1>
 
         <label className="uploadButton">
-          Subir personaje
+          Upload character
           <input
             type="file"
             accept="image/*"
@@ -229,7 +229,7 @@ function App() {
         </label>
 
         <label className="uploadButton">
-          Subir token
+          Upload token
           <input
             type="file"
             accept="image/*"
@@ -238,7 +238,7 @@ function App() {
         </label>
 
         <label className="control">
-          Tamaño personaje: {scale}%
+          Character size: {scale}%
           <input
             type="range"
             min="50"
@@ -249,7 +249,7 @@ function App() {
         </label>
 
         <label className="control">
-          Tamaño máscara base: {maskSize}px
+          Base mask size: {maskSize}px
           <input
             type="range"
             min="100"
@@ -260,7 +260,7 @@ function App() {
         </label>
 
         <label className="control">
-          Tamaño token: {tokenScale}%
+          Token size: {tokenScale}%
           <input
             type="range"
             min="50"
@@ -271,11 +271,11 @@ function App() {
         </label>
 
         <button className="downloadButton" onClick={() => setDrawnMasks([])}>
-          Borrar máscara dinámica
+          Remove dynamic mask
         </button>
 
         <label className="control">
-          Resolución descarga
+          Download resolution
           <select
             value={exportSize}
             onChange={(event) => setExportSize(Number(event.target.value))}
@@ -288,7 +288,7 @@ function App() {
         </label>
 
         <button className="downloadButton" onClick={downloadToken}>
-          Descargar PNG
+          Download as PNG
         </button>
       </aside>
 
