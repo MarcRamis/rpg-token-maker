@@ -121,6 +121,8 @@ function App() {
   const characterProps = getImageProps(characterImage, scale, position);
   const tokenProps = getImageProps(tokenImage, tokenScale, { x: 0, y: 0 });
 
+  const [isTokenInventoryOpen, setIsTokenInventoryOpen] = useState(false);
+
   function loadCharacterImage(file: File) {
     if (!file.type.startsWith("image/")) return;
 
@@ -147,24 +149,6 @@ function App() {
   function handleTokenImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) loadTokenImage(file);
-  }
-
-  function handleBuiltInTokenChange(
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) {
-    const value = event.target.value;
-
-    if (value === "none") {
-      setTokenImageUrl(null);
-      return;
-    }
-
-    if (value === "upload") {
-      document.getElementById("custom-token-upload")?.click();
-      return;
-    }
-
-    setTokenImageUrl(value);
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
@@ -264,31 +248,61 @@ function App() {
           />
         </label>
 
-        <label className="control">
-          Token inventory
-          <select onChange={handleBuiltInTokenChange} defaultValue="">
-            <option value="" disabled>
-              Choose a token
-            </option>
+        <div className="tokenInventoryWrapper">
+          <button
+            type="button"
+            className="inventoryButton"
+            onClick={() => setIsTokenInventoryOpen((previous) => !previous)}
+          >
+            Token inventory ▼
+          </button>
 
-            <option value="none">None</option>
+          {isTokenInventoryOpen && (
+            <div className="tokenInventory">
+              <button
+                type="button"
+                className="tokenCard textCard"
+                onClick={() => {
+                  setTokenImageUrl(null);
+                }}
+              >
+                NONE
+              </button>
 
-            <option value="upload">Upload custom token...</option>
+              <button
+                type="button"
+                className="tokenCard textCard"
+                onClick={() => {
+                  document.getElementById("custom-token-upload")?.click();
+                  setIsTokenInventoryOpen(false);
+                }}
+              >
+                UPLOAD
+              </button>
 
-            {BUILT_IN_TOKENS.map((token) => (
-              <option key={token.src} value={token.src}>
-                {token.name}
-              </option>
-            ))}
-          </select>
+              {BUILT_IN_TOKENS.map((token) => (
+                <button
+                  type="button"
+                  key={token.src}
+                  className="tokenCard"
+                  onClick={() => {
+                    setTokenImageUrl(token.src);
+                  }}
+                >
+                  <img src={token.src} alt={token.name} />
+                </button>
+              ))}
+            </div>
+          )}
+
           <input
             id="custom-token-upload"
             type="file"
             accept="image/*"
-            style={{ display: "none" }}
+            hidden
             onChange={handleTokenImageUpload}
           />
-        </label>
+        </div>
 
         <label className="control">
           Character size: {scale}%
