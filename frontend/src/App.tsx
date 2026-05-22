@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import './App.css';
+import { useState } from "react";
+import "./App.css";
 
 type Position = {
   x: number;
@@ -7,33 +7,65 @@ type Position = {
 };
 
 function App() {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(
+    null,
+  );
+  const [tokenImageUrl, setTokenImageUrl] = useState<string | null>(null);
   const [scale, setScale] = useState(100);
+  const [tokenScale, setTokenScale] = useState(100);
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
 
-  function loadImage(file: File) {
-    if (!file.type.startsWith('image/')) return;
+  function loadCharacterImage(file: File) {
+    if (!file.type.startsWith("image/")) return;
 
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
+    setCharacterImageUrl(URL.createObjectURL(file));
     setScale(100);
     setPosition({ x: 0, y: 0 });
   }
 
-  function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  function loadTokenImage(file: File) {
+    if (!file.type.startsWith("image/")) return;
+
+    setTokenImageUrl(URL.createObjectURL(file));
+  }
+
+  function handleCharacterImageUpload(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
-    if (file) loadImage(file);
+    if (file) loadCharacterImage(file);
+  }
+
+  function handleTokenImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) loadTokenImage(file);
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
 
-    const file = event.dataTransfer.files?.[0];
-    if (file) loadImage(file);
+    const files = Array.from(event.dataTransfer.files);
+
+    files.forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+
+      if (!characterImageUrl) {
+        loadCharacterImage(file);
+        return;
+      }
+
+      if (!tokenImageUrl) {
+        loadTokenImage(file);
+      }
+    });
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
     if (event.buttons !== 1) return;
+
+    const target = event.target as HTMLElement;
+
+    if (!target.classList.contains("characterImage")) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
 
@@ -57,18 +89,41 @@ function App() {
         <h1>RPG Token Maker</h1>
 
         <label className="uploadButton">
-          Subir imagen
-          <input type="file" accept="image/*" onChange={handleImageUpload} />
+          Subir personaje
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleCharacterImageUpload}
+          />
+        </label>
+
+        <label className="uploadButton">
+          Subir token
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleTokenImageUpload}
+          />
         </label>
 
         <label className="control">
-          Tamaño: {scale}%
+          Tamaño personaje: {scale}%
           <input
             type="range"
             min="50"
             max="200"
             value={scale}
             onChange={(event) => setScale(Number(event.target.value))}
+          />
+        </label>
+        <label className="control">
+          Tamaño token: {tokenScale}%
+          <input
+            type="range"
+            min="50"
+            max="200"
+            value={tokenScale}
+            onChange={(event) => setTokenScale(Number(event.target.value))}
           />
         </label>
       </aside>
@@ -80,9 +135,9 @@ function App() {
           onDragOver={(event) => event.preventDefault()}
           onPointerMove={handlePointerMove}
         >
-          {imageUrl ? (
+          {characterImageUrl ? (
             <img
-              src={imageUrl}
+              src={characterImageUrl}
               alt="Personaje"
               className="characterImage"
               draggable={false}
@@ -92,6 +147,18 @@ function App() {
             />
           ) : (
             <p>Arrastra una imagen aquí</p>
+          )}
+
+          {tokenImageUrl && (
+            <img
+              src={tokenImageUrl}
+              alt="Token"
+              className="tokenImage"
+              draggable={false}
+              style={{
+                transform: `scale(${tokenScale / 100})`,
+              }}
+            />
           )}
         </div>
       </section>
