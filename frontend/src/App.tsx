@@ -10,6 +10,24 @@ import {
 import Konva from "konva";
 import "./App.css";
 
+const tokenModules = import.meta.glob(
+  "./assets/tokens/*.{png,jpg,jpeg,webp,svg}",
+  {
+    eager: true,
+    query: "?url",
+    import: "default",
+  },
+);
+
+const BUILT_IN_TOKENS = Object.entries(tokenModules).map(([path, src]) => {
+  const fileName = path.split("/").pop()?.split(".")[0] ?? "Token";
+
+  return {
+    name: fileName,
+    src: src as string,
+  };
+});
+
 type Position = {
   x: number;
   y: number;
@@ -131,6 +149,24 @@ function App() {
     if (file) loadTokenImage(file);
   }
 
+  function handleBuiltInTokenChange(
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) {
+    const value = event.target.value;
+
+    if (value === "none") {
+      setTokenImageUrl(null);
+      return;
+    }
+
+    if (value === "upload") {
+      document.getElementById("custom-token-upload")?.click();
+      return;
+    }
+
+    setTokenImageUrl(value);
+  }
+
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
 
@@ -228,11 +264,28 @@ function App() {
           />
         </label>
 
-        <label className="uploadButton">
-          Upload token
+        <label className="control">
+          Token inventory
+          <select onChange={handleBuiltInTokenChange} defaultValue="">
+            <option value="" disabled>
+              Choose a token
+            </option>
+
+            <option value="none">None</option>
+
+            <option value="upload">Upload custom token...</option>
+
+            {BUILT_IN_TOKENS.map((token) => (
+              <option key={token.src} value={token.src}>
+                {token.name}
+              </option>
+            ))}
+          </select>
           <input
+            id="custom-token-upload"
             type="file"
             accept="image/*"
+            style={{ display: "none" }}
             onChange={handleTokenImageUpload}
           />
         </label>
