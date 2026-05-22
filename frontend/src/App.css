@@ -1,11 +1,23 @@
+:root {
+  --bg-main: #111111;
+  --bg-panel: #181818;
+  --bg-soft: #222222;
+  --border-soft: #333333;
+  --text-main: #f2f2f2;
+  --text-muted: #b8b8b8;
+  --accent: #f7c93e;
+  --accent-hover: #f68f22;
+  --accent-text: #111111;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #15151c;
-  color: white;
+  background: var(--bg-main);
+  color: var(--text-main);
   font-family: system-ui, sans-serif;
 }
 
@@ -17,8 +29,8 @@ body {
 
 .panel {
   padding: 24px;
-  background: #20202a;
-  border-right: 1px solid #333344;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-soft);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -27,18 +39,23 @@ body {
 .panel h1 {
   font-size: 24px;
   margin: 0;
+  color: var(--text-main);
 }
 
-.uploadButton {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
+.uploadButton,
+.downloadButton {
   padding: 12px 16px;
   border-radius: 12px;
-  background: #7c5cff;
-  color: white;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
   cursor: pointer;
+}
+
+.uploadButton:hover,
+.downloadButton:hover {
+  background: var(--accent-hover);
 }
 
 .uploadButton input {
@@ -48,12 +65,26 @@ body {
 .control {
   display: grid;
   gap: 8px;
+  color: var(--text-muted);
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+select {
+  background: var(--bg-soft);
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px;
 }
 
 .workspace {
   display: grid;
   place-items: center;
   padding: 32px;
+  background: var(--bg-main);
 }
 
 .workspaceContent {
@@ -70,15 +101,17 @@ body {
   position: relative;
 }
 
-.tokenPreview img {
+.tokenPreviewBorder {
+  position: absolute;
   width: 360px;
   height: 360px;
-  object-fit: contain;
-  transform-origin: center;
+  left: 80px;
+  top: 80px;
+  border: 1px dashed var(--border-soft);
+  pointer-events: none;
 }
 
 .characterImage {
-  z-index: 1;
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -89,73 +122,9 @@ body {
 }
 
 .tokenImage {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
   pointer-events: none;
-}
-
-.exportPreview {
-  display: grid;
-  gap: 12px;
-  text-align: center;
-}
-
-.exportPreview h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.exportImagePreview {
-  width: 100%;
-  max-width: 220px;
-  aspect-ratio: 1;
-  object-fit: contain;
-  border: 1px solid #333344;
-  justify-self: center;
-}
-
-.exportCanvas {
-  display: none;
 }
 
 .downloadButton {
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 0;
-  background: #e6d39a;
-  color: #15151c;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.characterMask {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-}
-
-.characterMask::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1px dashed #ffffff66;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.tokenPreviewBorder {
-  position: absolute;
-  width: 360px;
-  height: 360px;
-  left: 80px;
-  top: 80px;
-  border: 1px dashed #44445a;
-  pointer-events: none;
+  width: 100%;
 }
