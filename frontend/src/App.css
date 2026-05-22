@@ -68,7 +68,6 @@ body {
   place-items: center;
   overflow: hidden;
   position: relative;
-  border: 1px dashed #44445a;
 }
 
 .tokenPreview img {
@@ -128,4 +127,25 @@ body {
   color: #15151c;
   font-weight: 700;
   cursor: pointer;
+}
+
+.characterMask {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.characterMask::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px dashed #ffffff66;
+  border-radius: 50%;
+  pointer-events: none;
 }

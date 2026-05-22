@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import "./App.css";
+import { useRef, useState } from "react";
 import { toPng } from "html-to-image";
+import "./App.css";
 
 type Position = {
   x: number;
@@ -10,83 +10,15 @@ type Position = {
 const TOKEN_SIZE = 360;
 
 function App() {
-  const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(
-    null,
-  );
+  const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(null);
   const [tokenImageUrl, setTokenImageUrl] = useState<string | null>(null);
   const [scale, setScale] = useState(100);
   const [tokenScale, setTokenScale] = useState(100);
+  const [maskSize, setMaskSize] = useState(300);
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
   const [exportSize, setExportSize] = useState(512);
+
   const tokenPreviewRef = useRef<HTMLDivElement | null>(null);
-
-  const exportCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  function loadImage(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = src;
-    });
-  }
-
-  function drawContainedImage(
-    ctx: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    imageScale: number,
-    x: number,
-    y: number,
-  ) {
-    const ratio = Math.min(TOKEN_SIZE / image.width, TOKEN_SIZE / image.height);
-    const width = image.width * ratio;
-    const height = image.height * ratio;
-
-    ctx.save();
-    ctx.translate(TOKEN_SIZE / 2, TOKEN_SIZE / 2);
-    ctx.scale(imageScale / 100, imageScale / 100);
-    ctx.translate(x, y);
-    ctx.drawImage(image, -width / 2, -height / 2, width, height);
-    ctx.restore();
-  }
-
-  useEffect(() => {
-    async function renderPreview() {
-      const canvas = exportCanvasRef.current;
-      if (!canvas) return;
-
-      canvas.width = exportSize;
-      canvas.height = exportSize;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.scale(exportSize / TOKEN_SIZE, exportSize / TOKEN_SIZE);
-
-      if (characterImageUrl) {
-        const characterImage = await loadImage(characterImageUrl);
-        drawContainedImage(ctx, characterImage, scale, position.x, position.y);
-      }
-
-      if (tokenImageUrl) {
-        const tokenImage = await loadImage(tokenImageUrl);
-        drawContainedImage(ctx, tokenImage, tokenScale, 0, 0);
-      }
-
-      ctx.restore();
-    }
-
-    renderPreview();
-  }, [
-    characterImageUrl,
-    tokenImageUrl,
-    scale,
-    tokenScale,
-    position,
-    exportSize,
-  ]);
 
   function loadCharacterImage(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -102,9 +34,7 @@ function App() {
     setTokenImageUrl(URL.createObjectURL(file));
   }
 
-  function handleCharacterImageUpload(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
+  function handleCharacterImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) loadCharacterImage(file);
   }
@@ -180,20 +110,12 @@ function App() {
 
         <label className="uploadButton">
           Subir personaje
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleCharacterImageUpload}
-          />
+          <input type="file" accept="image/*" onChange={handleCharacterImageUpload} />
         </label>
 
         <label className="uploadButton">
           Subir token
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleTokenImageUpload}
-          />
+          <input type="file" accept="image/*" onChange={handleTokenImageUpload} />
         </label>
 
         <label className="control">
@@ -204,6 +126,17 @@ function App() {
             max="200"
             value={scale}
             onChange={(event) => setScale(Number(event.target.value))}
+          />
+        </label>
+
+        <label className="control">
+          Tamaño máscara: {maskSize}px
+          <input
+            type="range"
+            min="100"
+            max="360"
+            value={maskSize}
+            onChange={(event) => setMaskSize(Number(event.target.value))}
           />
         </label>
 
@@ -230,6 +163,7 @@ function App() {
             <option value={2048}>2048 x 2048</option>
           </select>
         </label>
+
         <button className="downloadButton" onClick={downloadToken}>
           Descargar PNG
         </button>
@@ -243,19 +177,27 @@ function App() {
           onDragOver={(event) => event.preventDefault()}
           onPointerMove={handlePointerMove}
         >
-          {characterImageUrl ? (
-            <img
-              src={characterImageUrl}
-              alt="Personaje"
-              className="characterImage"
-              draggable={false}
-              style={{
-                transform: `scale(${scale / 100}) translate(${position.x}px, ${position.y}px)`,
-              }}
-            />
-          ) : (
-            <p>Arrastra una imagen aquí</p>
-          )}
+          <div
+            className="characterMask"
+            style={{
+              width: `${maskSize}px`,
+              height: `${maskSize}px`,
+            }}
+          >
+            {characterImageUrl ? (
+              <img
+                src={characterImageUrl}
+                alt="Personaje"
+                className="characterImage"
+                draggable={false}
+                style={{
+                  transform: `scale(${scale / 100}) translate(${position.x}px, ${position.y}px)`,
+                }}
+              />
+            ) : (
+              <p>Arrastra una imagen aquí</p>
+            )}
+          </div>
 
           {tokenImageUrl && (
             <img
