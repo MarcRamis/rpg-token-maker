@@ -32,7 +32,6 @@ export function TokenInventory({
             className="tokenCard textCard"
             onClick={() => {
               setTokenImageUrl(null);
-              setIsOpen(false);
             }}
           >
             NONE
@@ -59,11 +58,9 @@ export function TokenInventory({
               className="tokenCard"
               onClick={() => {
                 setTokenImageUrl(token.src);
-                setIsOpen(false);
               }}
             >
               <img src={token.src} alt={token.name} />
-              <span>{token.name}</span>
             </button>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { TokenInventory } from "./components/TokenInventory";
+import { ControlPanel } from "./components/ControlPanel";
 import { useLoadedImage } from "./hooks/useLoadedImage";
 import { getImageProps } from "./utils/imageUtils";
 
@@ -41,8 +41,20 @@ function App() {
   const characterImage = useLoadedImage(characterImageUrl);
   const tokenImage = useLoadedImage(tokenImageUrl);
 
-  const characterProps = getImageProps(characterImage, scale, position, TOKEN_SIZE, TOKEN_CENTER);
-  const tokenProps = getImageProps(tokenImage, tokenScale, { x: 0, y: 0 }, TOKEN_SIZE, TOKEN_CENTER);
+  const characterProps = getImageProps(
+    characterImage,
+    scale,
+    position,
+    TOKEN_SIZE,
+    TOKEN_CENTER,
+  );
+  const tokenProps = getImageProps(
+    tokenImage,
+    tokenScale,
+    { x: 0, y: 0 },
+    TOKEN_SIZE,
+    TOKEN_CENTER,
+  );
 
   const [isTokenInventoryOpen, setIsTokenInventoryOpen] = useState(false);
 
@@ -66,12 +78,22 @@ function App() {
     event: React.ChangeEvent<HTMLInputElement>,
   ) {
     const file = event.target.files?.[0];
-    if (file) loadCharacterImage(file);
+
+    if (file) {
+      loadCharacterImage(file);
+    }
+
+    event.target.value = "";
   }
 
   function handleTokenImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (file) loadTokenImage(file);
+
+    if (file) {
+      loadTokenImage(file);
+    }
+
+    event.target.value = "";
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
@@ -159,79 +181,23 @@ function App() {
 
   return (
     <main className="app">
-      <aside className="panel">
-        <h1>Tokn</h1>
-
-        <label className="uploadButton">
-          Upload character
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleCharacterImageUpload}
-          />
-        </label>
-
-        <TokenInventory
-          isOpen={isTokenInventoryOpen}
-          setIsOpen={setIsTokenInventoryOpen}
-          setTokenImageUrl={setTokenImageUrl}
-          handleTokenImageUpload={handleTokenImageUpload}
-        />
-
-        <label className="control">
-          Character size: {scale}%
-          <input
-            type="range"
-            min="50"
-            max="200"
-            value={scale}
-            onChange={(event) => setScale(Number(event.target.value))}
-          />
-        </label>
-
-        <label className="control">
-          Base mask size: {maskSize}px
-          <input
-            type="range"
-            min="100"
-            max="360"
-            value={maskSize}
-            onChange={(event) => setMaskSize(Number(event.target.value))}
-          />
-        </label>
-
-        <label className="control">
-          Token size: {tokenScale}%
-          <input
-            type="range"
-            min="50"
-            max="200"
-            value={tokenScale}
-            onChange={(event) => setTokenScale(Number(event.target.value))}
-          />
-        </label>
-
-        <button className="downloadButton" onClick={() => setDrawnMasks([])}>
-          Remove dynamic mask
-        </button>
-
-        <label className="control">
-          Download resolution
-          <select
-            value={exportSize}
-            onChange={(event) => setExportSize(Number(event.target.value))}
-          >
-            <option value={256}>256 x 256</option>
-            <option value={512}>512 x 512</option>
-            <option value={1024}>1024 x 1024</option>
-            <option value={2048}>2048 x 2048</option>
-          </select>
-        </label>
-
-        <button className="downloadButton" onClick={downloadToken}>
-          Download as PNG
-        </button>
-      </aside>
+      <ControlPanel
+        scale={scale}
+        setScale={setScale}
+        maskSize={maskSize}
+        setMaskSize={setMaskSize}
+        tokenScale={tokenScale}
+        setTokenScale={setTokenScale}
+        exportSize={exportSize}
+        setExportSize={setExportSize}
+        isTokenInventoryOpen={isTokenInventoryOpen}
+        setIsTokenInventoryOpen={setIsTokenInventoryOpen}
+        setTokenImageUrl={setTokenImageUrl}
+        handleCharacterImageUpload={handleCharacterImageUpload}
+        handleTokenImageUpload={handleTokenImageUpload}
+        onClearDynamicMask={() => setDrawnMasks([])}
+        onDownloadToken={downloadToken}
+      />
 
       <section className="workspace">
         <div
