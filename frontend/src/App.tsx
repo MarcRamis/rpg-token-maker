@@ -6,16 +6,16 @@ import { ControlPanel } from "./components/ControlPanel";
 import { useLoadedImage } from "./hooks/useLoadedImage";
 import { getImageProps } from "./utils/imageUtils";
 import { TokenEditor } from "./components/TokenEditor";
-
 import type { DrawnMask, Position } from "./types/token";
 
 import { useRef, useState } from "react";
 
-
-const TOKEN_SIZE = 360;
-const EDITOR_SIZE = 520;
-const TOKEN_OFFSET = (EDITOR_SIZE - TOKEN_SIZE) / 2;
-const TOKEN_CENTER = TOKEN_OFFSET + TOKEN_SIZE / 2;
+import {
+  EDITOR_SIZE,
+  TOKEN_CENTER,
+  TOKEN_OFFSET,
+  TOKEN_SIZE,
+} from "./constants/editor";
 
 function App() {
   const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(
