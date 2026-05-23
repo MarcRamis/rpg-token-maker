@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { TokenInventory } from "./components/TokenInventory";
+import { useLoadedImage } from "./hooks/useLoadedImage";
+import { getImageProps } from "./utils/imageUtils";
+
+import type { DrawnMask, Position } from "./types/token";
+
+import { useRef, useState } from "react";
 import {
   Circle,
   Group,
@@ -10,93 +16,10 @@ import {
 import Konva from "konva";
 import "./App.css";
 
-const tokenModules = import.meta.glob(
-  "./assets/tokens/*.{png,jpg,jpeg,webp,svg}",
-  {
-    eager: true,
-    query: "?url",
-    import: "default",
-  },
-);
-
-const BUILT_IN_TOKENS = Object.entries(tokenModules).map(([path, src]) => {
-  const fileName = path.split("/").pop()?.split(".")[0] ?? "Token";
-
-  return {
-    name: fileName,
-    src: src as string,
-  };
-});
-
-type Position = {
-  x: number;
-  y: number;
-};
-
-type DrawnMask = {
-  id: string;
-  points: number[];
-};
-
 const TOKEN_SIZE = 360;
 const EDITOR_SIZE = 520;
 const TOKEN_OFFSET = (EDITOR_SIZE - TOKEN_SIZE) / 2;
 const TOKEN_CENTER = TOKEN_OFFSET + TOKEN_SIZE / 2;
-
-function useLoadedImage(src: string | null) {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!src) {
-      queueMicrotask(() => {
-        if (!cancelled) setImage(null);
-      });
-
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const img = new window.Image();
-
-    img.onload = () => {
-      if (!cancelled) setImage(img);
-    };
-
-    img.src = src;
-
-    return () => {
-      cancelled = true;
-    };
-  }, [src]);
-
-  return image;
-}
-
-function getImageProps(
-  image: HTMLImageElement | null,
-  scale: number,
-  position: Position,
-) {
-  if (!image) return null;
-
-  const ratio = Math.min(TOKEN_SIZE / image.width, TOKEN_SIZE / image.height);
-  const width = image.width * ratio;
-  const height = image.height * ratio;
-
-  return {
-    x: TOKEN_CENTER + position.x,
-    y: TOKEN_CENTER + position.y,
-    width,
-    height,
-    offsetX: width / 2,
-    offsetY: height / 2,
-    scaleX: scale / 100,
-    scaleY: scale / 100,
-  };
-}
 
 function App() {
   const [characterImageUrl, setCharacterImageUrl] = useState<string | null>(
@@ -118,8 +41,8 @@ function App() {
   const characterImage = useLoadedImage(characterImageUrl);
   const tokenImage = useLoadedImage(tokenImageUrl);
 
-  const characterProps = getImageProps(characterImage, scale, position);
-  const tokenProps = getImageProps(tokenImage, tokenScale, { x: 0, y: 0 });
+  const characterProps = getImageProps(characterImage, scale, position, TOKEN_SIZE, TOKEN_CENTER);
+  const tokenProps = getImageProps(tokenImage, tokenScale, { x: 0, y: 0 }, TOKEN_SIZE, TOKEN_CENTER);
 
   const [isTokenInventoryOpen, setIsTokenInventoryOpen] = useState(false);
 
@@ -248,61 +171,12 @@ function App() {
           />
         </label>
 
-        <div className="tokenInventoryWrapper">
-          <button
-            type="button"
-            className="inventoryButton"
-            onClick={() => setIsTokenInventoryOpen((previous) => !previous)}
-          >
-            Token inventory ▼
-          </button>
-
-          {isTokenInventoryOpen && (
-            <div className="tokenInventory">
-              <button
-                type="button"
-                className="tokenCard textCard"
-                onClick={() => {
-                  setTokenImageUrl(null);
-                }}
-              >
-                NONE
-              </button>
-
-              <button
-                type="button"
-                className="tokenCard textCard"
-                onClick={() => {
-                  document.getElementById("custom-token-upload")?.click();
-                  setIsTokenInventoryOpen(false);
-                }}
-              >
-                UPLOAD
-              </button>
-
-              {BUILT_IN_TOKENS.map((token) => (
-                <button
-                  type="button"
-                  key={token.src}
-                  className="tokenCard"
-                  onClick={() => {
-                    setTokenImageUrl(token.src);
-                  }}
-                >
-                  <img src={token.src} alt={token.name} />
-                </button>
-              ))}
-            </div>
-          )}
-
-          <input
-            id="custom-token-upload"
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={handleTokenImageUpload}
-          />
-        </div>
+        <TokenInventory
+          isOpen={isTokenInventoryOpen}
+          setIsOpen={setIsTokenInventoryOpen}
+          setTokenImageUrl={setTokenImageUrl}
+          handleTokenImageUpload={handleTokenImageUpload}
+        />
 
         <label className="control">
           Character size: {scale}%
