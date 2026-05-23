@@ -1,20 +1,16 @@
+import Konva from "konva";
+
+import "./App.css";
+
 import { ControlPanel } from "./components/ControlPanel";
 import { useLoadedImage } from "./hooks/useLoadedImage";
 import { getImageProps } from "./utils/imageUtils";
+import { TokenEditor } from "./components/TokenEditor";
 
 import type { DrawnMask, Position } from "./types/token";
 
 import { useRef, useState } from "react";
-import {
-  Circle,
-  Group,
-  Image as KonvaImage,
-  Layer,
-  Line,
-  Stage,
-} from "react-konva";
-import Konva from "konva";
-import "./App.css";
+
 
 const TOKEN_SIZE = 360;
 const EDITOR_SIZE = 520;
@@ -199,125 +195,30 @@ function App() {
         onDownloadToken={downloadToken}
       />
 
-      <section className="workspace">
-        <div
-          className="tokenPreview"
-          onDrop={handleDrop}
-          onDragOver={(event) => event.preventDefault()}
-        >
-          <Stage
-            ref={stageRef}
-            width={EDITOR_SIZE}
-            height={EDITOR_SIZE}
-            onMouseDown={handleStageMouseDown}
-            onMouseMove={handleStageMouseMove}
-            onMouseUp={handleStageMouseUp}
-          >
-            <Layer>
-              <Group
-                clipFunc={(ctx) => {
-                  ctx.beginPath();
-
-                  ctx.arc(
-                    TOKEN_CENTER,
-                    TOKEN_CENTER,
-                    maskSize / 2,
-                    0,
-                    Math.PI * 2,
-                  );
-
-                  ctx.closePath();
-                }}
-              >
-                {characterImage && characterProps && (
-                  <KonvaImage
-                    image={characterImage}
-                    {...characterProps}
-                    draggable={!isDrawingMask}
-                    onDragMove={(event) => {
-                      setPosition({
-                        x: event.target.x() - TOKEN_CENTER,
-                        y: event.target.y() - TOKEN_CENTER,
-                      });
-                    }}
-                  />
-                )}
-              </Group>
-
-              {tokenImage && tokenProps && (
-                <KonvaImage
-                  image={tokenImage}
-                  {...tokenProps}
-                  listening={false}
-                />
-              )}
-
-              <Group
-                clipFunc={(ctx) => {
-                  ctx.beginPath();
-
-                  [
-                    ...drawnMasks.map((mask) => mask.points),
-                    currentMaskPoints,
-                  ].forEach((points) => {
-                    if (points.length < 4) return;
-
-                    ctx.moveTo(points[0], points[1]);
-
-                    for (let i = 2; i < points.length; i += 2) {
-                      ctx.lineTo(points[i], points[i + 1]);
-                    }
-
-                    ctx.closePath();
-                  });
-                }}
-              >
-                {characterImage && characterProps && (
-                  <KonvaImage
-                    image={characterImage}
-                    {...characterProps}
-                    listening={false}
-                  />
-                )}
-              </Group>
-
-              <Circle
-                name="helper"
-                x={TOKEN_CENTER}
-                y={TOKEN_CENTER}
-                radius={maskSize / 2}
-                stroke="#ffffff66"
-                dash={[6, 6]}
-                listening={false}
-              />
-
-              {drawnMasks.map((mask) => (
-                <Line
-                  name="helper"
-                  key={mask.id}
-                  points={mask.points}
-                  closed
-                  stroke="white"
-                  dash={[6, 6]}
-                  listening={false}
-                />
-              ))}
-
-              {currentMaskPoints.length > 0 && (
-                <Line
-                  name="helper"
-                  points={currentMaskPoints}
-                  closed
-                  stroke="white"
-                  dash={[6, 6]}
-                  listening={false}
-                />
-              )}
-            </Layer>
-          </Stage>
-          <div className="tokenPreviewBorder" />
-        </div>
-      </section>
+      <TokenEditor
+        stageRef={stageRef}
+        editorSize={EDITOR_SIZE}
+        tokenSize={TOKEN_SIZE}
+        tokenCenter={TOKEN_CENTER}
+        maskSize={maskSize}
+        isDrawingMask={isDrawingMask}
+        characterImage={characterImage}
+        tokenImage={tokenImage}
+        characterProps={characterProps}
+        tokenProps={tokenProps}
+        drawnMasks={drawnMasks}
+        currentMaskPoints={currentMaskPoints}
+        onDrop={handleDrop}
+        onStageMouseDown={handleStageMouseDown}
+        onStageMouseMove={handleStageMouseMove}
+        onStageMouseUp={handleStageMouseUp}
+        onCharacterDragMove={(event) => {
+          setPosition({
+            x: event.target.x() - TOKEN_CENTER,
+            y: event.target.y() - TOKEN_CENTER,
+          });
+        }}
+      />
     </main>
   );
 }
